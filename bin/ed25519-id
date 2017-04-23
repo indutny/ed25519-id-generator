@@ -63,18 +63,28 @@ if (cluster.isMaster) {
   return;
 }
 
-const signatures = require('sodium-signatures');
+const binding = require('ed25519-id-binding');
+const crypto = require('crypto');
+
 process.on('message', (config) => {
-  let start = process.hrtime();
-  const pair = id.generate(config.prefix, () => signatures.keyPair(), {
-    reportEvery: 10000,
-    report: (counter) => {
-      process.send({
-        type: 'status',
-        payload: counter
-      });
-    }
-  });
+  const ITERATIONS = 50000;
+
+  const prefix = Buffer.from(config.prefix);
+  let pair;
+  for (let counter = 0; ; counter += ITERATIONS) {
+    process.send({
+      type: 'status',
+      payload: counter
+    });
+    pair = binding.generate(prefix, ITERATIONS);
+    if (pair)
+      break;
+  }
+
+  pair = {
+    secretKey: pair,
+    publicKey: pair.slice(32)
+  };
 
   process.send({
     type: 'result',
