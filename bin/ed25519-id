@@ -17,7 +17,7 @@ if (cluster.isMaster) {
     const worker = cluster.fork();
     worker.send({ prefix: argv.prefix });
     worker.on('message', (msg) => {
-      console.log(msg);
+      console.log(JSON.stringify(msg, null, 2));
       process.exit(0);
     });
   }
