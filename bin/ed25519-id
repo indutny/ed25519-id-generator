@@ -6,19 +6,57 @@ const id = require('ed25519-id');
 if (cluster.isMaster) {
   const argv = require('yargs')
       .alias('p', 'prefix')
+      .alias('j', 'jobs')
       .describe('prefix', 'output representation prefix')
+      .describe('jobs', 'number of concurrent jobs')
+      .number('jobs')
       .demand('prefix')
       .argv;
 
   const os = require('os');
-  const CPU_COUNT = os.cpus().length;
+  const ProgressBar = require('progress');
 
+  const CPU_COUNT = argv.jobs || os.cpus().length;
+  const SEARCH_SPACE = 4 * Math.pow(27, argv.prefix.length);
+
+  const progress = new ProgressBar(
+    ':bar :current/:total :probability% :elapseds :rate ops/sec',
+    {
+      width: 60,
+      total: SEARCH_SPACE
+    }
+  );
+
+  let lastTotal = 0;
+  function report() {
+    let total = 0;
+    for (let i = 0; i < counts.length; i++)
+      total += counts[i];
+
+    const delta = total - lastTotal;
+    lastTotal = total;
+    while (total >= progress.total)
+      progress.total *= 2;
+
+    let p = (1 - Math.pow((SEARCH_SPACE - 1) / SEARCH_SPACE, total)) * 100;
+    progress.tick(delta, {
+      probability: p.toFixed(2)
+    });
+  }
+
+  const counts = new Array(CPU_COUNT).fill(0);
   for (let i = 0; i < CPU_COUNT; i++) {
     const worker = cluster.fork();
     worker.send({ prefix: argv.prefix });
     worker.on('message', (msg) => {
-      console.log(JSON.stringify(msg, null, 2));
-      process.exit(0);
+      if (msg.type === 'result') {
+        console.log(JSON.stringify(msg.payload, null, 2));
+        process.exit(0);
+      } else if (msg.type === 'status') {
+        const counter = msg.payload;
+        counts[i] = counter;
+        report();
+      }
     });
   }
   return;
@@ -26,11 +64,23 @@ if (cluster.isMaster) {
 
 const signatures = require('sodium-signatures');
 process.on('message', (config) => {
-  const pair = id.generate(config.prefix, () => signatures.keyPair());
+  let start = process.hrtime();
+  const pair = id.generate(config.prefix, () => signatures.keyPair(), {
+    reportEvery: 10000,
+    report: (counter) => {
+      process.send({
+        type: 'status',
+        payload: counter
+      });
+    }
+  });
 
   process.send({
-    secretKey: pair.secretKey.toString('hex'),
-    publicKey: pair.publicKey.toString('hex'),
-    id: id.stringify(pair.publicKey, config.prefix.length)
+    type: 'result',
+    payload: {
+      secretKey: pair.secretKey.toString('hex'),
+      publicKey: pair.publicKey.toString('hex'),
+      id: id.stringify(pair.publicKey, config.prefix.length)
+    }
   });
 });
