@@ -17,10 +17,10 @@ if (cluster.isMaster) {
   const ProgressBar = require('progress');
 
   const CPU_COUNT = argv.jobs || os.cpus().length;
-  const SEARCH_SPACE = 4 * Math.pow(27, argv.prefix.length);
+  const SEARCH_SPACE = Math.pow(27, argv.prefix.length +  1);
 
   const progress = new ProgressBar(
-    ':bar :current/:total :probability% :elapseds :rate ops/sec',
+    ':bar :current/:total :probability% :etas :rate ops/sec',
     {
       width: 60,
       total: SEARCH_SPACE
@@ -38,7 +38,7 @@ if (cluster.isMaster) {
     while (total >= progress.total)
       progress.total *= 2;
 
-    let p = (1 - Math.pow((SEARCH_SPACE - 1) / SEARCH_SPACE, total)) * 100;
+    let p = (1 - Math.pow(1 - 1 / SEARCH_SPACE, total)) * 100;
     progress.tick(delta, {
       probability: p.toFixed(2)
     });
