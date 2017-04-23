@@ -6,11 +6,7 @@ const id = require('ed25519-id');
 if (cluster.isMaster) {
   const argv = require('yargs')
       .alias('p', 'prefix')
-      .alias('l', 'loose')
       .describe('prefix', 'output representation prefix')
-      .describe('loose', 'accept longer result prefixes')
-      .boolean('loose')
-      .default('loose', false)
       .demand('prefix')
       .argv;
 
@@ -19,7 +15,7 @@ if (cluster.isMaster) {
 
   for (let i = 0; i < CPU_COUNT; i++) {
     const worker = cluster.fork();
-    worker.send({ prefix: argv.prefix, loose: argv.loose });
+    worker.send({ prefix: argv.prefix });
     worker.on('message', (msg) => {
       console.log(msg);
       process.exit(0);
@@ -30,8 +26,7 @@ if (cluster.isMaster) {
 
 const signatures = require('sodium-signatures');
 process.on('message', (config) => {
-  const pair = id.generate(config.prefix, () => signatures.keyPair(),
-                           config.loose);
+  const pair = id.generate(config.prefix, () => signatures.keyPair());
 
   process.send({
     secretKey: pair.secretKey.toString('hex'),
