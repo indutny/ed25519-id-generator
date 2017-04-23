@@ -18,12 +18,13 @@ if (cluster.isMaster) {
 
   const CPU_COUNT = argv.jobs || os.cpus().length;
   const SEARCH_SPACE = Math.pow(27, argv.prefix.length +  1);
+  const INITIAL_TOTAL = Math.log(2 / 3) / Math.log(1 - 1 / SEARCH_SPACE);
 
   const progress = new ProgressBar(
     ':bar :current/:total :probability% :etas :rate ops/sec',
     {
       width: 60,
-      total: SEARCH_SPACE
+      total: INITIAL_TOTAL
     }
   );
 
