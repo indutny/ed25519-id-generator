@@ -13,7 +13,7 @@
   "author": "Fedor Indutny <fedor@indutny.com> (http://darksi.de/)",
   "license": "MIT",
   "dependencies": {
-    "ed25519-id": "^2.0.0",
+    "ed25519-id": "^3.0.0",
     "sodium-signatures": "^2.0.0",
     "yargs": "^7.1.0"
   }
