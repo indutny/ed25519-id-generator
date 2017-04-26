@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const cluster = require('cluster');
-const id = require('ed25519-id');
+const id = require('huffin');
 
 if (cluster.isMaster) {
   const argv = require('yargs')
@@ -69,14 +69,16 @@ const crypto = require('crypto');
 process.on('message', (config) => {
   const ITERATIONS = 50000;
 
-  const prefix = Buffer.from(config.prefix);
+  const prefix = id.parsePrefix(config.prefix);
+  const prefixBuf = prefix.value.toBuffer();
+  const prefixBits = prefix.bitLength;
   let pair;
   for (let counter = 0; ; counter += ITERATIONS) {
     process.send({
       type: 'status',
       payload: counter
     });
-    pair = binding.generate(prefix, ITERATIONS);
+    pair = binding.generate(prefixBuf, prefixBits, ITERATIONS);
     if (pair)
       break;
   }
